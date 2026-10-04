@@ -1,4 +1,4 @@
-# Vortex Clothing Store Backend
+# Clothing Store Backend
 
 A FastAPI e-commerce backend rebuilt from the supplied starter project. It preserves the useful ideas from the original (FastAPI, SQLAlchemy, password hashing, OAuth2/JWT) and replaces the blog domain with a clothing-commerce domain.
 
