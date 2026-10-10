@@ -6,3 +6,4 @@ __pycache__/
 .pytest_cache/
 store.db
 .DS_Store
+/uploads/

@@ -21,133 +21,181 @@ def checkout(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    address = (
-        db.query(models.Address).filter_by(id=data.address_id, user_id=user.id).first()
-    )
-
-    if not address:
-        raise HTTPException(status_code=404, detail="Shipping address not found")
-
-    cart = (
-        db.query(models.CartItem)
-        .options(
-            selectinload(models.CartItem.variant).selectinload(
-                models.ProductVariant.product
-            )
-        )
-        .filter_by(user_id=user.id)
-        .all()
-    )
-
-    if not cart:
-        raise HTTPException(status_code=400, detail="Cart is empty")
-
-    subtotal = Decimal("0.00")
-
-    for item in cart:
-        variant = (
-            db.query(models.ProductVariant)
-            .filter(models.ProductVariant.id == item.variant_id)
-            .with_for_update()
+    try:
+        address = (
+            db.query(models.Address)
+            .filter_by(id=data.address_id, user_id=user.id)
             .first()
         )
 
-        if not variant:
-            raise HTTPException(status_code=404, detail="Product variant not found")
-
-        if item.quantity > variant.stock_quantity:
+        if not address:
             raise HTTPException(
-                status_code=409, detail=f"Insufficient stock for {variant.sku}"
+                status_code=404,
+                detail="Shipping address not found",
             )
 
-        item.variant = variant
-
-        price = (
-            variant.price if variant.price is not None else variant.product.base_price
-        )
-
-        subtotal += price * item.quantity
-
-    discount = Decimal("0.00")
-
-    if data.coupon_code:
-        coupon = (
-            db.query(models.Coupon)
-            .filter(
-                models.Coupon.code == data.coupon_code.upper(),
-                models.Coupon.is_active.is_(True),
+        cart = (
+            db.query(models.CartItem)
+            .options(
+                selectinload(models.CartItem.variant).selectinload(
+                    models.ProductVariant.product
+                )
             )
-            .first()
+            .filter_by(user_id=user.id)
+            .order_by(models.CartItem.variant_id)
+            .all()
         )
 
-        if not coupon:
-            raise HTTPException(status_code=400, detail="Invalid coupon")
+        if not cart:
+            raise HTTPException(
+                status_code=400,
+                detail="Cart is empty",
+            )
 
-        if subtotal < coupon.minimum_subtotal:
-            raise HTTPException(status_code=400, detail="Coupon minimum not reached")
+        subtotal = Decimal("0.00")
+        checkout_items = []
 
-        if coupon.percent_off:
-            discount = subtotal * Decimal(coupon.percent_off) / Decimal(100)
-        else:
-            discount = coupon.amount_off or Decimal("0.00")
+        for item in cart:
+            variant = (
+                db.query(models.ProductVariant)
+                .filter(models.ProductVariant.id == item.variant_id)
+                .with_for_update()
+                .first()
+            )
 
-        discount = min(discount, subtotal)
+            if not variant:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Product variant not found",
+                )
 
-    shipping = Decimal("0.00") if subtotal >= Decimal("100") else Decimal("10.00")
+            if not variant.is_active or not variant.product.is_active:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Product variant {variant.sku} is no longer available",
+                )
 
-    tax = Decimal("0.00")
-    total = subtotal - discount + shipping + tax
+            if item.quantity < 1:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid cart quantity",
+                )
 
-    order = models.Order(
-        order_number=f"VX-{uuid4().hex[:10].upper()}",
-        user_id=user.id,
-        subtotal=subtotal,
-        discount=discount,
-        shipping=shipping,
-        tax=tax,
-        total=total,
-        shipping_name=address.full_name,
-        shipping_line1=address.line1,
-        shipping_line2=address.line2,
-        shipping_city=address.city,
-        shipping_state=address.state,
-        shipping_postal_code=address.postal_code,
-        shipping_country=address.country,
-    )
+            if item.quantity > variant.stock_quantity:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Insufficient stock for {variant.sku}",
+                )
 
-    db.add(order)
-    db.flush()
+            price = (
+                variant.price
+                if variant.price is not None
+                else variant.product.base_price
+            )
 
-    for item in cart:
-        variant = item.variant
+            subtotal += price * item.quantity
 
-        price = (
-            variant.price if variant.price is not None else variant.product.base_price
+            checkout_items.append(
+                {
+                    "cart_item": item,
+                    "variant": variant,
+                    "price": price,
+                }
+            )
+
+        discount = Decimal("0.00")
+
+        if data.coupon_code:
+            coupon = (
+                db.query(models.Coupon)
+                .filter(
+                    models.Coupon.code == data.coupon_code.upper(),
+                    models.Coupon.is_active.is_(True),
+                )
+                .first()
+            )
+
+            if not coupon:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid coupon",
+                )
+
+            if subtotal < coupon.minimum_subtotal:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Coupon minimum not reached",
+                )
+
+            if coupon.percent_off:
+                discount = subtotal * Decimal(coupon.percent_off) / Decimal("100")
+            else:
+                discount = coupon.amount_off or Decimal("0.00")
+
+            discount = min(discount, subtotal)
+
+        shipping = (
+            Decimal("0.00") if subtotal >= Decimal("100.00") else Decimal("10.00")
         )
 
-        variant.stock_quantity -= item.quantity
+        tax = Decimal("0.00")
+        total = subtotal - discount + shipping + tax
 
-        order_item = models.OrderItem(
-            order_id=order.id,
-            variant_id=variant.id,
-            product_name=variant.product.name,
-            sku=variant.sku,
-            size=variant.size,
-            color=variant.color,
-            unit_price=price,
-            quantity=item.quantity,
+        order = models.Order(
+            order_number=f"VX-{uuid4().hex[:10].upper()}",
+            user_id=user.id,
+            subtotal=subtotal,
+            discount=discount,
+            shipping=shipping,
+            tax=tax,
+            total=total,
+            shipping_name=address.full_name,
+            shipping_line1=address.line1,
+            shipping_line2=address.line2,
+            shipping_city=address.city,
+            shipping_state=address.state,
+            shipping_postal_code=address.postal_code,
+            shipping_country=address.country,
         )
 
-        db.add(order_item)
-        db.delete(item)
+        db.add(order)
+        db.flush()
 
-    db.commit()
+        for checkout_item in checkout_items:
+            item = checkout_item["cart_item"]
+            variant = checkout_item["variant"]
+            price = checkout_item["price"]
 
-    return order_query(db).filter(models.Order.id == order.id).first()
+            variant.stock_quantity -= item.quantity
+
+            order_item = models.OrderItem(
+                order_id=order.id,
+                variant_id=variant.id,
+                product_name=variant.product.name,
+                sku=variant.sku,
+                size=variant.size,
+                color=variant.color,
+                unit_price=price,
+                quantity=item.quantity,
+            )
+
+            db.add(order_item)
+            db.delete(item)
+
+        db.commit()
+
+        return order_query(db).filter(models.Order.id == order.id).first()
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.get("", response_model=list[schemas.OrderOut])
-def history(db: Session = Depends(get_db), user=Depends(get_current_user)):
+def history(
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
     return (
         order_query(db)
         .filter(models.Order.user_id == user.id)
@@ -158,15 +206,23 @@ def history(db: Session = Depends(get_db), user=Depends(get_current_user)):
 
 @router.get("/{order_id}", response_model=schemas.OrderOut)
 def detail(
-    order_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
+    order_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
 ):
     order = (
         order_query(db)
-        .filter(models.Order.id == order_id, models.Order.user_id == user.id)
+        .filter(
+            models.Order.id == order_id,
+            models.Order.user_id == user.id,
+        )
         .first()
     )
 
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found",
+        )
 
     return order

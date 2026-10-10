@@ -84,6 +84,17 @@ def products(
 
     return query.distinct().offset(offset).limit(limit).all()
 
+@router.get(
+    "/admin/products",
+    response_model=list[schemas.ProductOut],
+    dependencies=[Depends(require_admin)],
+)
+def admin_products(db: Session = Depends(get_db)):
+    return (
+        product_query(db)
+        .order_by(models.Product.created_at.desc())
+        .all()
+    )
 
 @router.get("/products/{slug}", response_model=schemas.ProductOut)
 def product(slug: str, db: Session = Depends(get_db)):
@@ -185,3 +196,64 @@ def update_product(
     db.commit()
 
     return product_query(db).filter(models.Product.id == product.id).first()
+
+@router.post(
+    "/products/{product_id}/variants",
+    response_model=schemas.VariantOut,
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
+def create_product_variant(
+    product_id: int,
+    data: schemas.VariantCreate,
+    db: Session = Depends(get_db),
+):
+    product = db.get(models.Product, product_id)
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    existing_variant = (
+        db.query(models.ProductVariant)
+        .filter(models.ProductVariant.sku == data.sku)
+        .first()
+    )
+
+    if existing_variant:
+        raise HTTPException(status_code=409, detail="SKU already exists")
+
+    variant = models.ProductVariant(
+        product_id=product_id,
+        **data.model_dump(),
+    )
+
+    db.add(variant)
+    db.commit()
+    db.refresh(variant)
+
+    return variant
+
+@router.patch(
+    "/variants/{variant_id}",
+    response_model=schemas.VariantOut,
+    dependencies=[Depends(require_admin)],
+)
+def update_variant(
+    variant_id: int,
+    data: schemas.VariantUpdate,
+    db: Session = Depends(get_db),
+):
+    variant = db.get(models.ProductVariant, variant_id)
+
+    if not variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Product variant not found",
+        )
+
+    variant.is_active = data.is_active
+
+    db.commit()
+    db.refresh(variant)
+
+    return variant

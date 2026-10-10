@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard | 3WRLD</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+    <header class="site-header">
+        <a class="logo" href="index.html">3WRLD</a>
+        <nav>
+            <a href="shop.html">Shop</a>
+            <a href="account.html">Account</a>
+            <a href="cart.html">Cart</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="page-header">
+            <p class="eyebrow">STORE MANAGEMENT</p>
+            <h1>Admin Dashboard</h1>
+        </section>
+
+        <section class="section narrow">
+            <div id="admin-message" role="status">
+                Verifying administrator access...
+            </div>
+
+            <div id="admin-dashboard" hidden>
+                <div class="panel">
+                    <h2>Store Overview</h2>
+
+                    <div class="admin-stats">
+                        <div>
+                            <h3 id="total-products">0</h3>
+                            <p>Products</p>
+                        </div>
+
+                        <div>
+                            <h3 id="total-orders">0</h3>
+                            <p>Orders</p>
+                        </div>
+
+                        <div>
+                            <h3 id="pending-orders">0</h3>
+                            <p>Pending Orders</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="panel" style="margin-top: 24px">
+                    <h2>Add New Product</h2>
+                    <p>Create a new clothing product for 3WRLD.</p>
+
+                    <form id="create-product-form" class="form-grid">
+                        <label>
+                            Product Name
+                            <input class="input" name="name" placeholder="3WRLD Hoodie" required />
+                        </label>
+
+                        <label>
+                            Product Slug
+                            <input class="input" name="slug" placeholder="3wrld-hoodie" required />
+                        </label>
+
+                        <label>
+                            Description
+                            <textarea class="input" name="description" rows="4"></textarea>
+                        </label>
+
+                        <label>
+                            Price ($)
+                            <input class="input" name="base_price" type="number" min="0.01" step="0.01" required />
+                        </label>
+
+                        <label>
+                            Compare At Price ($)
+                            <input class="input" name="compare_at_price" type="number" min="0.01" step="0.01" />
+                        </label>
+
+                        <label>
+                            Category ID
+                            <input class="input" name="category_id" type="number" min="1" />
+                        </label>
+
+                        <label>
+                            Collection ID
+                            <input class="input" name="collection_id" type="number" min="1" />
+                        </label>
+
+                        <label>
+                            Gender
+                            <select class="input" name="gender">
+                                <option value="">Not specified</option>
+                                <option value="unisex">Unisex</option>
+                                <option value="men">Men</option>
+                                <option value="women">Women</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Image URL
+                            <input class="input" name="image_url" type="url"
+                                placeholder="https://example.com/hoodie.jpg" />
+                        </label>
+
+                        <label>
+                            Sizes (comma-separated)
+                            <input class="input" name="sizes" placeholder="S, M, L, XL" required />
+                        </label>
+
+                        <label>
+                            Color
+                            <input class="input" name="color" placeholder="Black" required />
+                        </label>
+
+                        <label>
+                            Stock Per Size
+                            <input class="input" name="stock_quantity" type="number" min="0" step="1" value="10"
+                                required />
+                        </label>
+
+                        <label>
+                            <input type="checkbox" name="is_featured" />
+                            Featured Product
+                        </label>
+
+                        <button class="btn" type="submit">Create Product</button>
+                        <p id="create-product-message" role="status"></p>
+                    </form>
+                </div>
+
+                <div class="panel" style="margin-top: 24px">
+                    <h2>Manage Products</h2>
+                    <p>View products and inventory.</p>
+
+                    <div id="admin-products">
+                        Loading products...
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top: 24px">
+                    <h2>Manage Orders</h2>
+                    <p>Review customer orders and update their status.</p>
+
+                    <div id="admin-orders">
+                        Loading orders...
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <strong>3WRLD</strong>
+        <p>© 2026 3WRLD</p>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+
+</html>

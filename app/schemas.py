@@ -87,6 +87,9 @@ class VariantCreate(BaseModel):
 
     is_active: bool = True
 
+class VariantUpdate(BaseModel):
+    is_active: bool
+
 
 class VariantOut(ORM):
     id: int
@@ -98,6 +101,17 @@ class VariantOut(ORM):
 
     stock_quantity: int
     is_active: bool
+
+class CartProductOut(ORM):
+    id: int
+    name: str
+    slug: str
+    base_price: Decimal
+    images: list[ImageOut]
+
+
+class CartVariantOut(VariantOut):
+    product: CartProductOut
 
 
 class ProductCreate(BaseModel):
@@ -170,10 +184,18 @@ class CartUpdate(BaseModel):
     quantity: int = Field(ge=1, le=20)
 
 
+class CartProductOut(ORM):
+    id: int
+    name: str
+    slug: str
+    base_price: Decimal
+    images: list[ImageOut]
+
+
 class CartItemOut(ORM):
     id: int
     quantity: int
-    variant: VariantOut
+    variant: CartVariantOut
 
 
 class AddressCreate(BaseModel):

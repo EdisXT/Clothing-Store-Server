@@ -1,0 +1,105 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout | 3WRLD</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+
+  <body>
+    <header class="site-header">
+      <a class="logo" href="index.html">3WRLD</a>
+
+      <nav>
+        <a href="shop.html">Shop</a>
+        <a href="account.html">Account</a>
+        <a href="cart.html">Cart</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-header">
+        <h1>Checkout</h1>
+      </section>
+
+      <section class="section narrow">
+        <form id="checkout-form" class="panel form-grid">
+          <h2>Shipping Information</h2>
+
+          <input
+            class="input"
+            name="full_name"
+            placeholder="Full name"
+            required
+          />
+
+          <input
+            class="input"
+            name="line1"
+            placeholder="Street address"
+            required
+          />
+
+          <input
+            class="input"
+            name="line2"
+            placeholder="Apartment, suite, etc. (optional)"
+          />
+
+          <input
+            class="input"
+            name="city"
+            placeholder="City"
+            required
+          />
+
+          <input
+            class="input"
+            name="state"
+            placeholder="State"
+            required
+          />
+
+          <input
+            class="input"
+            name="postal_code"
+            placeholder="ZIP code"
+            required
+          />
+
+          <input
+            class="input"
+            name="phone"
+            type="tel"
+            placeholder="Phone number (optional)"
+          />
+
+          <input
+            class="input"
+            name="coupon_code"
+            placeholder="Coupon code (optional)"
+          />
+
+          <button class="btn" type="submit" id="place-order">
+            Place Order
+          </button>
+
+          <p id="checkout-message" role="status" aria-live="polite"></p>
+        </form>
+
+        <div id="order-confirmation" class="panel" hidden></div>
+      </section>
+    </main>
+
+    <footer>
+      <strong>3WRLD</strong>
+      <p>© 2026 3WRLD</p>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/checkout.js"></script>
+  </body>
+</html>
